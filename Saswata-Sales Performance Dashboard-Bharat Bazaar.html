@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Saswata-Sales Performance Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#171011; --card:#211719; --border:#3A2427; --text:#F5EAE6; --muted:#B79E98; --faint:#8A7570;
+  --header1:#1C0F0F; --header2:#33130F;
+  --red:#E63946; --gold:#F4C430; --orange:#F3722C; --maroon:#C1121F; --rose:#FF6F91;
+  --radius:16px; --shadow:0 8px 26px rgba(0,0,0,.35);
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden;}
+.shell{height:100vh;display:flex;flex-direction:column;padding:14px 20px;gap:10px;}
+
+.header{
+  background:linear-gradient(120deg,var(--header1),var(--header2));
+  border:1px solid var(--border);
+  border-radius:var(--radius); padding:14px 22px; color:#fff;
+  display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+  box-shadow:var(--shadow); flex-shrink:0;
+}
+.header__title{font-size:19px;font-weight:800;letter-spacing:-.01em;}
+.header__sub{font-size:11.5px;color:#D9B8AE;margin-top:2px;}
+.chip{
+  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16);
+  color:#F3E3DC; font-size:11.5px; font-weight:600; padding:6px 11px; border-radius:999px;
+  display:flex; align-items:center; gap:6px; white-space:nowrap;
+}
+.header__meta{display:flex;gap:8px;flex-wrap:wrap;}
+
+.tabs{display:flex;gap:6px;flex-shrink:0;}
+.tab{
+  border:1px solid var(--border); background:var(--card); color:var(--muted);
+  font-size:12.5px; font-weight:700; padding:8px 16px; border-radius:10px 10px 0 0; cursor:pointer;
+}
+.tab.is-active{background:var(--red); border-color:var(--red); color:#fff;}
+
+.slicers{
+  background:var(--card); border:1px solid var(--border); border-radius:12px;
+  padding:9px 16px; box-shadow:var(--shadow); flex-shrink:0;
+  display:flex; flex-wrap:wrap; gap:16px; align-items:center; row-gap:6px;
+}
+.slicer-group{display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
+.slicer-label{font-size:10px; font-weight:700; color:var(--faint); text-transform:uppercase; letter-spacing:.04em; margin-right:2px;}
+.pill{
+  border:1px solid var(--border); background:#2A1C1E; color:var(--muted);
+  font-size:11.5px; font-weight:600; padding:5px 11px; border-radius:999px; cursor:pointer;
+  transition:all .12s ease;
+}
+.pill:hover{border-color:var(--gold);}
+.pill.is-active{background:var(--red); border-color:var(--red); color:#fff;}
+.slicer-reset{margin-left:auto; font-size:11.5px; font-weight:700; color:var(--gold); background:none; border:none; cursor:pointer;}
+.slicer-reset:hover{text-decoration:underline;}
+
+.page-content{min-height:0;}
+#page1{flex:1; min-height:0; display:flex; flex-direction:column; gap:10px; overflow:hidden;}
+#page2{flex:1; min-height:0; overflow-y:auto; display:none; padding-right:2px;}
+
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;flex-shrink:0;}
+.kpi{
+  background:var(--card); border:1px solid var(--border); border-radius:12px;
+  padding:10px 14px; box-shadow:var(--shadow); border-top:3px solid var(--accent,var(--red));
+}
+.kpi__icon{font-size:15px;margin-bottom:4px;}
+.kpi__value{font-size:19px;font-weight:800;letter-spacing:-.01em;}
+.kpi__label{font-size:10.5px;color:var(--muted);margin-top:1px;font-weight:600;}
+
+.charts-grid{flex:1; min-height:0; display:grid; grid-template-columns:1.6fr 1fr; grid-template-rows:1fr 1fr; gap:10px;}
+.panel{
+  background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+  padding:12px 16px 10px; box-shadow:var(--shadow); display:flex; flex-direction:column; min-height:0;
+}
+.panel__head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-shrink:0;}
+.panel__title{font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:6px;}
+.panel__note{font-size:10px;color:var(--faint);}
+.chart-box{position:relative;flex:1;min-height:0;}
+.empty-note{text-align:center; color:var(--faint); font-size:12px; padding:30px 10px;}
+
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;flex-shrink:0;}
+.legend__item{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--muted);font-weight:600;}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+
+/* page 2 */
+.p2-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.p2-panel{
+  background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+  padding:16px 18px; box-shadow:var(--shadow);
+}
+.p2-panel .chart-box{height:210px;}
+.insights{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:14px;}
+.insight{
+  background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+  padding:14px 16px; box-shadow:var(--shadow);
+}
+.insight__title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;gap:6px;margin-bottom:8px;}
+.mix-bar{height:9px;border-radius:999px;overflow:hidden;display:flex;margin-bottom:7px;}
+.mix-legend{display:flex;flex-wrap:wrap;gap:7px;font-size:10.5px;color:var(--muted);font-weight:600;}
+.performer{display:flex;align-items:center;gap:11px;}
+.performer__avatar{
+  width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--gold),#ffe08a);
+  display:flex;align-items:center;justify-content:center;font-weight:800;color:#4a3200;font-size:14px;flex-shrink:0;
+}
+.performer__name{font-weight:800;font-size:14px;}
+.performer__meta{font-size:11px;color:var(--muted);}
+.opportunity__text{font-size:12.5px;line-height:1.5;color:var(--text);}
+.opportunity__text b{color:var(--red);}
+
+@media (max-width:1080px){
+  body{overflow:auto;}
+  .shell{height:auto;}
+  #page1{overflow:visible;}
+  .kpi-row{grid-template-columns:repeat(3,1fr);}
+  .charts-grid{grid-template-columns:1fr; grid-template-rows:auto;}
+  .chart-box{height:220px;}
+  .p2-grid,.insights{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header class="header">
+    <div>
+      <div class="header__title">📊 Sales Performance Dashboard</div>
+      <div class="header__sub">Consumer Electronics · Jan 2025 – Sep 2026 · Prepared by Data &amp; Insights</div>
+    </div>
+    <div class="header__meta" id="statusChips"></div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab" data-page="1">📋 Overview</button>
+    <button class="tab" data-page="2">🔎 Business Insights</button>
+  </div>
+
+  <div class="slicers" id="slicerBar"></div>
+
+  <div id="page1" class="page-content">
+    <section class="kpi-row" id="kpiRow"></section>
+    <section class="charts-grid">
+      <div class="panel">
+        <div class="panel__head">
+          <div class="panel__title">📈 Revenue &amp; Profit Trend</div>
+          <div class="panel__note">Monthly · Completed orders</div>
+        </div>
+        <div class="chart-box"><canvas id="trendChart"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel__head">
+          <div class="panel__title">🧩 Revenue by Category</div>
+          <div class="panel__note" id="categoryNote">Share of revenue</div>
+        </div>
+        <div class="chart-box"><canvas id="categoryChart"></canvas></div>
+        <div class="legend" id="categoryLegend"></div>
+      </div>
+      <div class="panel">
+        <div class="panel__head">
+          <div class="panel__title">🧭 Regional Performance</div>
+          <div class="panel__note">Revenue by region</div>
+        </div>
+        <div class="chart-box"><canvas id="regionChart"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel__head">
+          <div class="panel__title">🏅 Top 5 Products</div>
+          <div class="panel__note">By revenue</div>
+        </div>
+        <div class="chart-box"><canvas id="productChart"></canvas></div>
+      </div>
+    </section>
+  </div>
+
+  <div id="page2" class="page-content">
+    <div class="p2-grid">
+      <div class="p2-panel">
+        <div class="panel__head">
+          <div class="panel__title">🏆 Salesperson Leaderboard</div>
+          <div class="panel__note">By revenue closed</div>
+        </div>
+        <div class="chart-box"><canvas id="spChart"></canvas></div>
+      </div>
+      <div class="p2-panel">
+        <div class="panel__head">
+          <div class="panel__title">📦 Order Status Breakdown</div>
+          <div class="panel__note">All orders in view</div>
+        </div>
+        <div class="chart-box"><canvas id="statusChart"></canvas></div>
+      </div>
+      <div class="p2-panel">
+        <div class="panel__head">
+          <div class="panel__title">👥 Top 5 Customers</div>
+          <div class="panel__note">By revenue</div>
+        </div>
+        <div class="chart-box"><canvas id="custChart"></canvas></div>
+      </div>
+      <div class="p2-panel">
+        <div class="panel__head">
+          <div class="panel__title">💳 Payment Method Mix</div>
+          <div class="panel__note">Share of revenue</div>
+        </div>
+        <div class="chart-box"><canvas id="paymentChart"></canvas></div>
+      </div>
+    </div>
+
+    <section class="insights">
+      <div class="insight">
+        <div class="insight__title">🛒 Channel Mix</div>
+        <div class="mix-bar" id="mixBar"></div>
+        <div class="mix-legend" id="mixLegend"></div>
+      </div>
+      <div class="insight">
+        <div class="insight__title">🥇 Top Performer</div>
+        <div class="performer" id="performerBox"></div>
+      </div>
+      <div class="insight">
+        <div class="insight__title">🌱 Growth Opportunity</div>
+        <div class="opportunity__text" id="opportunityText"></div>
+      </div>
+    </section>
+  </div>
+
+</div>
+
+<script>
+const DATA = [{"Month":"2025-01","Region":"West","Category":"Mobiles","ProductName":"Smart X2","Channel":"Online","OrderStatus":"Completed","Salesperson":"Arjun","CustomerName":"Galaxy Office Point","PaymentMethod":"Bank Transfer","DiscountPct":0.12,"SalesAmount":36080.0,"Profit":3380.0},{"Month":"2025-01","Region":"West","Category":"Mobiles","ProductName":"Smart X2","Channel":"Retail Store","OrderStatus":"Completed","Salesperson":"Vikram","CustomerName":"FutureTech Hub","PaymentMethod":"Credit Card","DiscountPct":0.15,"SalesAmount":174250.0,"Profit":10750.0},{"Month":"2025-01","Region":"East","Category":"Mobiles","ProductName":"Smart X1","Channel":"Corporate","OrderStatus":"Completed","Salesperson":"Vikram","CustomerName":"Insight Systems","PaymentMethod":"Credit Card","DiscountPct":0.1,"SalesAmount":28800.0,"Profit":3700.0},{"Month":"2025-02","Region":"North","Category":"Accessories","ProductName":"MousePro","Channel":"Online","OrderStatus":"Completed","Salesperson":"Sneha","CustomerName":"FutureTech Hub","PaymentMethod":"Debit Card","DiscountPct":0.0,"SalesAmount":2900.0,"Profit":1260.0},{"Month":"2025-02","Region":"North","Category":"Mobiles","ProductName":"Smart X1","Channel":"Online","OrderStatus":"Completed","Salesperson":"Rahul","CustomerName":"Aarav Enterprises","PaymentMethod":"Credit Card","DiscountPct":0.1,"SalesAmount":115200.0,"Profit":14800.0},{"Month":"2025-02","Region":"West","Category":"Accessories","ProductName":"KeyPro Combo","Channel":"Online","OrderStatus":"Completed","Salesperson":"Priya","CustomerName":"FutureTech Hub","PaymentMethod":"Debit Card","DiscountPct":0.0,"SalesAmount":8400.0,"Profit":3150.0},{"Month":"2025-02","Region":"North","Category":"Computers","ProductName":"OfficeLite 13","Channel":"Retail Store","OrderStatus":"Completed","Salesperson":"Priya","CustomerName":"BlueSky Retail","PaymentMethod":"UPI","DiscountPct":0.1,"SalesAmount":194400.0,"Profit":19200.0},{"Month":"2025-02","Region":"North","Category":"Accessories","ProductName":"ViewMax 27","Channel":"Online","OrderStatus":"Completed","Salesperson":"Ananya","CustomerName":"Junction Retail","PaymentMethod":"Credit Card","DiscountPct":0.1,"SalesAmount":19350.0,"Profit":3050.0},{"Month":"2025-03","Region":"East","Category":"Accessories","ProductName":"KeyPro Combo","Channel":"Online","OrderStatus":"Completed","Salesperson":"Ananya","CustomerName":"Horizon Traders","PaymentMethod":"UPI","DiscountPct":0.1,"SalesAmount":2520.0,"Profit":770.0},{"Month":"2025-03","Region":"South","Category":"Office","ProductName":"PrintFast 220","Channel":"Online","OrderStatus":"Completed","Salesperson":"Arjun","CustomerName":"Galaxy Office Point","PaymentMethod":"Debit Card","DiscountPct":0.05,"SalesAmount":97280.0,"Profit":19680.0},{"Month":"2025-03","Region":"North","Category":"Mobiles","ProductName":"Smart X1","Channel":"Retail Store","OrderStatus":"Returned","Salesperson":"Ananya","CustomerName":"CityMart Solutions","PaymentMethod":"Bank Transfer","DiscountPct":0.05,"SalesAmount":91200.0,"Profit":15900.0},{"Month":"2025-03","Region":"South","Category":"Accessories","ProductName":"KeyPro Combo","Channel":"Online","OrderStatus":"Completed","Salesperson":"Rahul","CustomerName":"Evergreen Stores","PaymentMethod":"Debit Card","DiscountPct":0.15,"SalesAmount":2380.0,"Profit":630.0},{"Month":"2025-04","Region":"West","Category":"Mobiles","ProductName":"Smart X2","Channel":"Retail Store","OrderStatus":"Completed","Salesperson":"Rahul","CustomerName":"Galaxy Office Point","PaymentMethod":"Debit Card","DiscountPct":0.05,"SalesAmount":116850.0,"Profit":18750.0},{"Month":"2025-04","Region":"South","Category":"Office","ProductName":"PrintFast 330","Channel":"Corporate","OrderStatus":"Completed","Salesperson":"Arjun","CustomerName":"Aarav Enterprises","PaymentMethod":"UPI","DiscountPct":0.05,"SalesAmount":17955.0,"Profit":3755.0},{"Month":"2025-04","Region":"West","Category":"Accessories","ProductName":"ViewMax 24","Channel":"Online","OrderStatus":"Completed","Salesperson":"Arjun","CustomerName":"BlueSky Retail","PaymentMethod":"UPI","DiscountPct":0.12,"SalesAmount":12760.0,"Profit":2060.0},{"Month":"2025-04","Region":"East","Category":"Mobiles","ProductName":"Smart X2","Channel":"Retail Store","OrderStatus":"Completed","Salesperson":"Priya","CustomerName":"CityMart Solutions","PaymentMethod":"Bank Transfer","DiscountPct":0.05,"SalesAmount":116850.0,"Profit":18750.0},{"Month":"2025-05","Region":"South","Category":"Computers","ProductName":"OfficeLite 13","Channel":"Corporate","OrderStatus":"Completed","Salesperson":"Vikram","CustomerName":"Evergreen Stores","PaymentMethod":"Debit Card","DiscountPct":0.1,"SalesAmount":48600.0,"Profit":4800.0},{"Month":"2025-05","Region":"South","Category":"Office","ProductName":"PrintFast 330","Channel":"Retail Store","OrderStatus":"Cancelled","Salesperson":"Priya","CustomerName":"Horizon Traders","PaymentMethod":"Bank Transfer","DiscountPct":0.05,"SalesAmount":53865.0,"Profit":11265.0},{"Month":"2025-05","Region":"North","Category":"Computers","ProductName":"ProBook 14","Channel":"Retail Store","OrderStatus":"Cancelled","Salesperson":"Arjun","CustomerName":"BlueSky Retail","PaymentMethod":"Debit Card","DiscountPct":0.1,"SalesAmount":167400.0,"Profit":15900.0},{"Month":"2025-06","Region":"East","Category":"Office","ProductName":"PrintFast 330","Channel":"Online","OrderStatus":"Completed","Salesperson":"Ananya","CustomerName":"Metro Digital","PaymentMethod":"Bank Transfer","DiscountPct":0.15,"SalesAmount":80325.0,"Profit":9325.0},{"Month":"2025-06","Region":"East","Category":"Mobiles","ProductName":"Smart X2","Channel":"Corporate","OrderStatus":"Returned","Salesperson":"Priya","CustomerName":"Junction Retail","PaymentMethod":"Bank Transfer","DiscountPct":0.0,"SalesAmount":123000.0,"Profit":24900.0},{"Month":"2025-06","Region":"North","Category":"Computers","ProductName":"OfficeLite 13","Channel":"Retail Store","OrderStatus":"Completed","Salesperson":"Rahul","CustomerName":"Delta Distributors","PaymentMethod":"Debit Card","DiscountPct":0.0,"SalesAmount":270000.0,"Profit":51000.0},{"Month":"2025-06","Region":"East","Category":"Computers","ProductName":"OfficeLite 13","Channel":"Online","OrderStatus":"Completed","Salesperson":"Priya","CustomerName":"Horizon Traders","PaymentMethod":"UPI","DiscountPct":0.1,"SalesAmount":243000.0,"Profit":24000.0},{"Month":"2025-06","Region":"West","Category":"Accessories","ProductName":"ViewMax 27","Channel":"Retail Store","OrderStatus":"Completed","Salesperson":"Ananya","CustomerName":"Galaxy Office Point","PaymentMethod":"Credit Card","DiscountPct":0.1,"SalesAmount":19350.0,"Profit":3050.0},{"Month":"2025-07","Region":"West","Category":"Accessories","ProductName":"KeyPro Combo","Channel":"Online","OrderStatus":"Completed","Salesperson":"Ananya","CustomerName":"Nova Business House","PaymentMethod":"Bank Transfer","DiscountPct":0.05,"SalesAmount":2660.0,"Profit":910.0},{"Month":"2025-07","Region":"South","Category":"Accessories","ProductName":"KeyPro Combo","Channel":"Retail Store","OrderStatus":"Completed","Salesperson":"Vikram","CustomerName":"Nova Business House","PaymentMethod":"Bank Transfer","DiscountPct":0.1,"SalesAmount":7560.0,"Profit":2310.0},{"Month":"2025-07","Region":"East","Category":"Mobiles","ProductName":"Smart X1","Channel":"Online","OrderStatus":"Completed","Salesperson":"Ananya","CustomerName":"Evergreen Stores","PaymentMethod":"Debit Card","DiscountPct":0.1,"SalesAmount":86400.0,"Profit":11100.0},{"Month":"2025-07","Region":"West","Category":"Accessories","ProductName":"KeyPro Combo","Channel":"Online","OrderStatus":"Completed","Salesperson":"Sneha","CustomerName":"Delta Distributors","PaymentMethod":"Bank Transfer","DiscountPct":0.05,"SalesAmount":2660.0,"Profit":910.0},{"Month":"2025-07","Region":"North","Category":"Computers","ProductName":"ProBook 15","Channel":"Corporate","OrderStatus":"Completed","Salesperson":"Vikram","CustomerName":"FutureTech Hub","PaymentMethod":"Debit Card","DiscountPct":0.12,"SalesAmount":62480.0,"Profit":4080.0},{"Month":"2025-07","Region":"East","Category":"Computers","ProductName":"ProBook 14","Channel":"Retail Store","OrderStatus":"Completed","Salesperson":"Priya","CustomerName":"CityMart Solutions","PaymentMethod":"UPI","DiscountPct":0.1,"SalesAmount":55800.0,"Profit":5300.0},{"Month":"2025-07","Region":"North","Category":"Accessories","ProductName":"MousePro","Channel":"Corporate","OrderStatus":"Completed","Salesperson":"Sneha","CustomerName":"BlueSky Retail","PaymentMethod":"UPI","DiscountPct":0.15,"SalesAmount":1232.5,"Profit":412.5},{"Month":"2025-08","Region":"East","Category":"Mobiles","ProductName":"Smart X2","Channel":"Online","OrderStatus":"Completed","Salesperson":"Priya","CustomerName":"Metro Digital","PaymentMethod":"Credit Card","DiscountPct":0.05,"SalesAmount":116850.0,"Profit":18750.0},{"Month":"2025-08","Region":"South","Category":"Mobiles","ProductName":"Smart X2","Channel":"Corporate","OrderStatus":"Completed","Salesperson":"Arjun","CustomerName":"FutureTech Hub","PaymentMethod":"Debit Card","DiscountPct":0.1,"SalesAmount":36900.0,"Profit":4200.0},{"Month":"2025-08","Region":"West","Category":"Accessories","ProductName":"ViewMax 24","Channel":"Online","OrderStatus":"Completed","Salesperson":"Vikram","CustomerName":"BlueSky Retail","PaymentMethod":"UPI","DiscountPct":0.1,"SalesAmount":26100.0,"Profit":4700.0},{"Month":"2025-08","Region":"West","Category":"Accessories","ProductName":"ViewMax 24","Channel":"Corporate","OrderStatus":"Completed","Salesperson":"Arjun","CustomerName":"Evergreen Stores","PaymentMethod":"Bank Transfer","DiscountPct":0.05,"SalesAmount":13775.0,"Profit":3075.0},{"Month":"2025-08","Region":"East","Category":"Computers","ProductName":"ProBook 15","Channel":"Corporate","OrderStatus":"Completed","Salesperson":"Sneha","CustomerName":"Aarav Enterprises","PaymentMethod":"UPI","DiscountPct":0.0,"SalesAmount":71000.0,"Profit":12600.0},{"Month":"2025-08","Region":"North","Category":"Office","ProductName":"PrintFast 220","Channel":"Retail Store","OrderStatus":"Cancelled","Salesperson":"Rahul","CustomerName":"Evergreen Stores","PaymentMethod":"Credit Card","DiscountPct":0.1,"SalesAmount":23040.0,"Profit":3640.0},{"Month":"2025-09","Region":"West","Category":"Office","ProductName":"PrintFast 220","Channel":"Online","OrderStatus":"Completed","Salesperson":"Arjun","CustomerName":"Evergreen Stores","PaymentMethod":"Bank Transfer","DiscountPct":0.05,"SalesAmount":12160.0,"Profit":2460.0},{"Month":"2025-09","Region":"East","Category":"Computers","ProductName":"OfficeLite 13","Channel":"Online","OrderStatus":"Completed","Salesperson":"Vikram","CustomerName":"Evergreen Stores","PaymentMethod":"Credit Card","DiscountPct":0.0,"SalesAmount":108000.0,"Profit":20400.0},{"Month":"2025-09","Region":"East","Category":"Computers","ProductName":"OfficeLite 13","Channel":"Online","OrderStatus":"Completed","Salesperson":"Arjun","CustomerName":"Insight Systems","PaymentMethod":"Credit Card","DiscountPct":0.05,"SalesAmount":256500.0,"Profit":37500.0},{"Month":"2025-09","Region":"South","Category":"Accessories","ProductName":"ViewMax 27","Channel":"Corporate","OrderStatus":"Completed","Salesperson":"Ananya","CustomerName":"Insight Systems","PaymentMethod":"UPI","DiscountPct":0.15,"SalesAmount":91375.0,"Profit":9875.0},{"Month":"2025-10","Region":"South","Category":"Computers","ProductName":"OfficeLite 13","Channel":"Retail Store","OrderStatus":"Completed","Salesperson":"Ananya","CustomerName":"Galaxy Office Point","PaymentMethod":"UPI","DiscountPct":0.15,"SalesAmount":91800.0,"Profit":4200.0},{"Month":"2025-10","Region":"South","Category":"Mobiles","ProductName":"Smart X1","Channel":"Retail Store","OrderStatus":"Completed","Salesperson":"Ananya","CustomerName":"CityMart Solutions","PaymentMethod":"Debit Card","DiscountPct":0.1,"SalesAmount":28800.0,"Profit":3700.0},{"Month":"2025-10","Region":"South","Category":"Mobiles","ProductName":"Smart X2","Channel":"Online","OrderStatus":"Completed","Salesperson":"Arjun","CustomerName":"BlueSky Retail","PaymentMethod":"Debit Card","DiscountPct":0.1,"SalesAmount":110700.0,"Profit":12600.0},{"Month":"2025-11","Region":"North","Category":"Computers","ProductName":"OfficeLite 13","Channel":"Corporate","OrderStatus":"Completed","Salesperson":"Arjun","CustomerName":"Insight Systems","PaymentMethod":"Credit Card","DiscountPct":0.1,"SalesAmount":97200.0,"Profit":9600.0},{"Month":"2025-11","Region":"North","Category":"Computers","ProductName":"ProBook 14","Channel":"Online","OrderStatus":"Completed","Salesperson":"Ananya","CustomerName":"Delta Distributors","PaymentMethod":"Bank Transfer","DiscountPct":0.0,"SalesAmount":310000.0,"Profit":57500.0},{"Month":"2025-11","Region":"East","Category":"Accessories","ProductName":"MousePro","Channel":"Online","OrderStatus":"Completed","Salesperson":"Rahul","CustomerName":"Galaxy Office Point","PaymentMethod":"Debit Card","DiscountPct":0.1,"SalesAmount":2610.0,"Profit":970.0},{"Month":"2025-11","Region":"South","Category":"Computers","ProductName":"ProBook 15","Channel":"Retail Store","OrderStatus":"Completed","Salesperson":"Vikram","CustomerName":"Metro Digital","PaymentMethod":"Debit Card","DiscountPct":0.12,"SalesAmount":124960.0,"Profit":8160.0},{"Month":"2025-11","Region":"East","Category":"Mobiles","ProductName":"Smart X2","Channel":"Online","OrderStatus":"Completed","Salesperson":"Arjun","CustomerName":"Galaxy Office Point","PaymentMethod":"Debit Card","DiscountPct":0.1,"SalesAmount":36900.0,"Profit":4200.0},{"Month":"2025-12","Region":"South","Category":"Accessories","ProductName":"ViewMax 24","Channel":"Online","OrderStatus":"Completed","Salesperson":"Vikram","CustomerName":"FutureTech Hub","PaymentMethod":"Debit Card","DiscountPct":0.15,"SalesAmount":49300.0,"Profit":6500.0},{"Month":"2025-12","Region":"East","Category":"Accessories","ProductName":"KeyPro Combo","Channel":"Corporate","OrderStatus":"Completed","Salesperson":"Vikram","CustomerName":"FutureTech Hub","PaymentMethod":"Credit Card","DiscountPct":0.05,"SalesAmount":2660.0,"Profit":910.0},{"Month":"2026-01","Region":"North","Category":"Office","ProductName":"PrintFast 220","Channel":"Corporate","OrderStatus":"Completed","Salesperson":"Priya","CustomerName":"Delta Distributors","PaymentMethod":"Bank Transfer","DiscountPct":0.05,"SalesAmount":36480.0,"Profit":7380.0},{"Month":"2026-01","Region":"East","Category":"Mobiles","ProductName":"Smart X2","Channel":"Online","OrderStatus":"Completed","Salesperson":"Sneha","CustomerName":"CityMart Solutions","PaymentMethod":"UPI","DiscountPct":0.05,"SalesAmount":116850.0,"Profit":18750.0},{"Month":"2026-01","Region":"East","Category":"Mobiles","ProductName":"Smart X1","Channel":"Online","OrderStatus":"Completed","Salesperson":"Sneha","CustomerName":"Junction Retail","PaymentMethod":"UPI","DiscountPct":0.05,"SalesAmount":30400.0,"Profit":5300.0},{"Month":"2026-01","Region":"West","Category":"Computers","ProductName":"OfficeLite 13","Channel":"Corporate","OrderStatus":"Completed","Salesperson":"Sneha","CustomerName":"Evergreen Stores","PaymentMethod":"UPI","DiscountPct":0.12,"SalesAmount":190080.0,"Profit":14880.0},{"Month":"2026-01","Region":"East","Category":"Accessories","ProductName":"KeyPro Combo","Channel":"Retail Store","OrderStatus":"Completed","Salesperson":"Ananya","CustomerName":"CityMart Solutions","PaymentMethod":"UPI","DiscountPct":0.1,"SalesAmount":7560.0,"Profit":2310.0},{"Month":"2026-01","Region":"South","Category":"Accessories","ProductName":"ViewMax 27","Channel":"Corporate","OrderStatus":"Completed","Salesperson":"Ananya","CustomerName":"Junction Retail","PaymentMethod":"UPI","DiscountPct":0.15,"SalesAmount":182750.0,"Profit":19750.0},{"Month":"2026-02","Region":"South","Category":"Mobiles","ProductName":"Smart X1","Channel":"Retail Store","OrderStatus":"Completed","Salesperson":"Vikram","CustomerName":"Nova Business House","PaymentMethod":"Debit Card","DiscountPct":0.05,"SalesAmount":91200.0,"Profit":15900.0},{"Month":"2026-03","Region":"North","Category":"Accessories","ProductName":"MousePro","Channel":"Online","OrderStatus":"Completed","Salesperson":"Vikram","CustomerName":"Metro Digital","PaymentMethod":"Bank Transfer","DiscountPct":0.1,"SalesAmount":3915.0,"Profit":1455.0},{"Month":"2026-03","Region":"East","Category":"Accessories","ProductName":"MousePro","Channel":"Retail Store","OrderStatus":"Completed","Salesperson":"Priya","CustomerName":"Galaxy Office Point","PaymentMethod":"Bank Transfer","DiscountPct":0.15,"SalesAmount":6162.5,"Profit":2062.5},{"Month":"2026-03","Region":"West","Category":"Computers","ProductName":"ProBook 15","Channel":"Retail Store","OrderStatus":"Completed","Salesperson":"Vikram","CustomerName":"Horizon Traders","PaymentMethod":"Credit Card","DiscountPct":0.12,"SalesAmount":499840.0,"Profit":32640.0},{"Month":"2026-03","Region":"East","Category":"Computers","ProductName":"ProBook 14","Channel":"Online","OrderStatus":"Completed","Salesperson":"Arjun","CustomerName":"Evergreen Stores","PaymentMethod":"Debit Card","DiscountPct":0.05,"SalesAmount":117800.0,"Profit":16800.0},{"Month":"2026-03","Region":"North","Category":"Accessories","ProductName":"ViewMax 27","Channel":"Retail Store","OrderStatus":"Completed","Salesperson":"Sneha","CustomerName":"CityMart Solutions","PaymentMethod":"Credit Card","DiscountPct":0.1,"SalesAmount":19350.0,"Profit":3050.0},{"Month":"2026-03","Region":"North","Category":"Accessories","ProductName":"KeyPro Combo","Channel":"Corporate","OrderStatus":"Completed","Salesperson":"Arjun","CustomerName":"Aarav Enterprises","PaymentMethod":"Debit Card","DiscountPct":0.0,"SalesAmount":5600.0,"Profit":2100.0},{"Month":"2026-03","Region":"West","Category":"Office","ProductName":"PrintFast 330","Channel":"Corporate","OrderStatus":"Completed","Salesperson":"Ananya","CustomerName":"Insight Systems","PaymentMethod":"Credit Card","DiscountPct":0.0,"SalesAmount":56700.0,"Profit":14100.0},{"Month":"2026-03","Region":"North","Category":"Office","ProductName":"PrintFast 220","Channel":"Corporate","OrderStatus":"Completed","Salesperson":"Arjun","CustomerName":"Horizon Traders","PaymentMethod":"Credit Card","DiscountPct":0.15,"SalesAmount":21760.0,"Profit":2360.0},{"Month":"2026-04","Region":"West","Category":"Office","ProductName":"PrintFast 330","Channel":"Corporate","OrderStatus":"Completed","Salesperson":"Rahul","CustomerName":"CityMart Solutions","PaymentMethod":"Debit Card","DiscountPct":0.15,"SalesAmount":32130.0,"Profit":3730.0},{"Month":"2026-04","Region":"East","Category":"Mobiles","ProductName":"Smart X2","Channel":"Retail Store","OrderStatus":"Completed","Salesperson":"Arjun","CustomerName":"Junction Retail","PaymentMethod":"Bank Transfer","DiscountPct":0.05,"SalesAmount":155800.0,"Profit":25000.0},{"Month":"2026-04","Region":"North","Category":"Mobiles","ProductName":"Smart X2","Channel":"Retail Store","OrderStatus":"Completed","Salesperson":"Rahul","CustomerName":"FutureTech Hub","PaymentMethod":"Bank Transfer","DiscountPct":0.12,"SalesAmount":36080.0,"Profit":3380.0},{"Month":"2026-04","Region":"North","Category":"Mobiles","ProductName":"Smart X2","Channel":"Online","OrderStatus":"Completed","Salesperson":"Ananya","CustomerName":"Galaxy Office Point","PaymentMethod":"Credit Card","DiscountPct":0.15,"SalesAmount":104550.0,"Profit":6450.0},{"Month":"2026-04","Region":"South","Category":"Accessories","ProductName":"KeyPro Combo","Channel":"Corporate","OrderStatus":"Completed","Salesperson":"Priya","CustomerName":"Metro Digital","PaymentMethod":"Bank Transfer","DiscountPct":0.1,"SalesAmount":20160.0,"Profit":6160.0},{"Month":"2026-04","Region":"West","Category":"Accessories","ProductName":"MousePro","Channel":"Retail Store","OrderStatus":"Completed","Salesperson":"Sneha","CustomerName":"Junction Retail","PaymentMethod":"Credit Card","DiscountPct":0.1,"SalesAmount":2610.0,"Profit":970.0},{"Month":"2026-04","Region":"East","Category":"Computers","ProductName":"ProBook 14","Channel":"Online","OrderStatus":"Completed","Salesperson":"Sneha","CustomerName":"Nova Business House","PaymentMethod":"UPI","DiscountPct":0.12,"SalesAmount":54560.0,"Profit":4060.0},{"Month":"2026-04","Region":"East","Category":"Office","ProductName":"PrintFast 330","Channel":"Corporate","OrderStatus":"Completed","Salesperson":"Rahul","CustomerName":"Aarav Enterprises","PaymentMethod":"UPI","DiscountPct":0.05,"SalesAmount":179550.0,"Profit":37550.0},{"Month":"2026-05","Region":"East","Category":"Mobiles","ProductName":"Smart X1","Channel":"Retail Store","OrderStatus":"Completed","Salesperson":"Sneha","CustomerName":"Galaxy Office Point","PaymentMethod":"Bank Transfer","DiscountPct":0.1,"SalesAmount":28800.0,"Profit":3700.0},{"Month":"2026-05","Region":"North","Category":"Computers","ProductName":"ProBook 15","Channel":"Corporate","OrderStatus":"Completed","Salesperson":"Sneha","CustomerName":"Metro Digital","PaymentMethod":"Credit Card","DiscountPct":0.05,"SalesAmount":134900.0,"Profit":18100.0},{"Month":"2026-05","Region":"West","Category":"Office","ProductName":"PrintFast 330","Channel":"Online","OrderStatus":"Completed","Salesperson":"Ananya","CustomerName":"Metro Digital","PaymentMethod":"Debit Card","DiscountPct":0.0,"SalesAmount":37800.0,"Profit":9400.0},{"Month":"2026-05","Region":"South","Category":"Mobiles","ProductName":"Smart X1","Channel":"Retail Store","OrderStatus":"Completed","Salesperson":"Sneha","CustomerName":"Metro Digital","PaymentMethod":"Credit Card","DiscountPct":0.12,"SalesAmount":56320.0,"Profit":6120.0},{"Month":"2026-05","Region":"West","Category":"Office","ProductName":"PrintFast 220","Channel":"Corporate","OrderStatus":"Completed","Salesperson":"Rahul","CustomerName":"Galaxy Office Point","PaymentMethod":"Debit Card","DiscountPct":0.05,"SalesAmount":12160.0,"Profit":2460.0},{"Month":"2026-06","Region":"North","Category":"Computers","ProductName":"ProBook 15","Channel":"Corporate","OrderStatus":"Completed","Salesperson":"Ananya","CustomerName":"Horizon Traders","PaymentMethod":"Credit Card","DiscountPct":0.05,"SalesAmount":67450.0,"Profit":9050.0},{"Month":"2026-07","Region":"West","Category":"Computers","ProductName":"OfficeLite 13","Channel":"Online","OrderStatus":"Completed","Salesperson":"Sneha","CustomerName":"CityMart Solutions","PaymentMethod":"Bank Transfer","DiscountPct":0.05,"SalesAmount":410400.0,"Profit":60000.0},{"Month":"2026-07","Region":"South","Category":"Office","ProductName":"PrintFast 220","Channel":"Online","OrderStatus":"Completed","Salesperson":"Rahul","CustomerName":"Evergreen Stores","PaymentMethod":"Bank Transfer","DiscountPct":0.1,"SalesAmount":11520.0,"Profit":1820.0},{"Month":"2026-07","Region":"North","Category":"Office","ProductName":"PrintFast 330","Channel":"Retail Store","OrderStatus":"Completed","Salesperson":"Arjun","CustomerName":"Nova Business House","PaymentMethod":"Debit Card","DiscountPct":0.1,"SalesAmount":51030.0,"Profit":8430.0},{"Month":"2026-07","Region":"West","Category":"Accessories","ProductName":"MousePro","Channel":"Corporate","OrderStatus":"Completed","Salesperson":"Rahul","CustomerName":"BlueSky Retail","PaymentMethod":"Credit Card","DiscountPct":0.0,"SalesAmount":1450.0,"Profit":630.0},{"Month":"2026-07","Region":"West","Category":"Mobiles","ProductName":"Tab Plus 10","Channel":"Corporate","OrderStatus":"Completed","Salesperson":"Rahul","CustomerName":"FutureTech Hub","PaymentMethod":"UPI","DiscountPct":0.05,"SalesAmount":24700.0,"Profit":4300.0},{"Month":"2026-07","Region":"South","Category":"Mobiles","ProductName":"Smart X2","Channel":"Corporate","OrderStatus":"Completed","Salesperson":"Sneha","CustomerName":"CityMart Solutions","PaymentMethod":"Credit Card","DiscountPct":0.12,"SalesAmount":108240.0,"Profit":10140.0},{"Month":"2026-07","Region":"North","Category":"Office","ProductName":"PrintFast 330","Channel":"Online","OrderStatus":"Completed","Salesperson":"Vikram","CustomerName":"Evergreen Stores","PaymentMethod":"UPI","DiscountPct":0.15,"SalesAmount":48195.0,"Profit":5595.0},{"Month":"2026-07","Region":"East","Category":"Office","ProductName":"PrintFast 220","Channel":"Online","OrderStatus":"Completed","Salesperson":"Sneha","CustomerName":"Evergreen Stores","PaymentMethod":"UPI","DiscountPct":0.05,"SalesAmount":97280.0,"Profit":19680.0},{"Month":"2026-08","Region":"North","Category":"Computers","ProductName":"ProBook 15","Channel":"Online","OrderStatus":"Completed","Salesperson":"Sneha","CustomerName":"BlueSky Retail","PaymentMethod":"UPI","DiscountPct":0.05,"SalesAmount":134900.0,"Profit":18100.0},{"Month":"2026-08","Region":"East","Category":"Accessories","ProductName":"ViewMax 24","Channel":"Retail Store","OrderStatus":"Completed","Salesperson":"Vikram","CustomerName":"Evergreen Stores","PaymentMethod":"Debit Card","DiscountPct":0.05,"SalesAmount":27550.0,"Profit":6150.0},{"Month":"2026-08","Region":"East","Category":"Computers","ProductName":"ProBook 14","Channel":"Retail Store","OrderStatus":"Returned","Salesperson":"Arjun","CustomerName":"Junction Retail","PaymentMethod":"Credit Card","DiscountPct":0.05,"SalesAmount":176700.0,"Profit":25200.0},{"Month":"2026-08","Region":"West","Category":"Accessories","ProductName":"ViewMax 27","Channel":"Retail Store","OrderStatus":"Completed","Salesperson":"Ananya","CustomerName":"Evergreen Stores","PaymentMethod":"Debit Card","DiscountPct":0.05,"SalesAmount":40850.0,"Profit":8250.0},{"Month":"2026-08","Region":"West","Category":"Accessories","ProductName":"MousePro","Channel":"Online","OrderStatus":"Completed","Salesperson":"Priya","CustomerName":"Galaxy Office Point","PaymentMethod":"Bank Transfer","DiscountPct":0.05,"SalesAmount":2755.0,"Profit":1115.0},{"Month":"2026-08","Region":"South","Category":"Accessories","ProductName":"MousePro","Channel":"Online","OrderStatus":"Completed","Salesperson":"Rahul","CustomerName":"Insight Systems","PaymentMethod":"Debit Card","DiscountPct":0.15,"SalesAmount":12325.0,"Profit":4125.0},{"Month":"2026-09","Region":"North","Category":"Mobiles","ProductName":"Tab Plus 10","Channel":"Online","OrderStatus":"Completed","Salesperson":"Sneha","CustomerName":"Evergreen Stores","PaymentMethod":"Bank Transfer","DiscountPct":0.0,"SalesAmount":104000.0,"Profit":22400.0},{"Month":"2026-09","Region":"East","Category":"Mobiles","ProductName":"Smart X2","Channel":"Online","OrderStatus":"Returned","Salesperson":"Sneha","CustomerName":"Horizon Traders","PaymentMethod":"Bank Transfer","DiscountPct":0.12,"SalesAmount":36080.0,"Profit":3380.0},{"Month":"2026-09","Region":"North","Category":"Office","ProductName":"PrintFast 220","Channel":"Corporate","OrderStatus":"Completed","Salesperson":"Rahul","CustomerName":"BlueSky Retail","PaymentMethod":"UPI","DiscountPct":0.1,"SalesAmount":23040.0,"Profit":3640.0},{"Month":"2026-09","Region":"West","Category":"Mobiles","ProductName":"Smart X1","Channel":"Retail Store","OrderStatus":"Returned","Salesperson":"Sneha","CustomerName":"Junction Retail","PaymentMethod":"Bank Transfer","DiscountPct":0.1,"SalesAmount":57600.0,"Profit":7400.0},{"Month":"2026-09","Region":"North","Category":"Accessories","ProductName":"KeyPro Combo","Channel":"Online","OrderStatus":"Completed","Salesperson":"Priya","CustomerName":"Aarav Enterprises","PaymentMethod":"Bank Transfer","DiscountPct":0.12,"SalesAmount":7392.0,"Profit":2142.0},{"Month":"2026-09","Region":"West","Category":"Computers","ProductName":"ProBook 14","Channel":"Corporate","OrderStatus":"Completed","Salesperson":"Ananya","CustomerName":"Evergreen Stores","PaymentMethod":"Debit Card","DiscountPct":0.1,"SalesAmount":111600.0,"Profit":10600.0}];
+
+const C = { red:'#E63946', gold:'#F4C430', orange:'#F3722C', maroon:'#C1121F', rose:'#FF6F91' };
+const REGION_META = { East:{icon:'➡️', color:C.red}, North:{icon:'⬆️', color:C.gold}, West:{icon:'⬅️', color:C.orange}, South:{icon:'⬇️', color:C.maroon} };
+const CATEGORY_META = { Computers:{icon:'🖥️', color:C.red}, Mobiles:{icon:'📱', color:C.gold}, Office:{icon:'🖨️', color:C.orange}, Accessories:{icon:'🖱️', color:C.maroon} };
+const CHANNEL_META = { Online:{icon:'🛒', color:C.red}, 'Retail Store':{icon:'🏬', color:C.gold}, Corporate:{icon:'🏢', color:C.orange} };
+const STATUS_META = { Completed:{color:C.gold}, Returned:{color:C.orange}, Cancelled:{color:C.maroon} };
+const PAYMENT_PALETTE = [C.red, C.gold, C.orange, C.maroon, C.rose];
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const monthLabel = (m) => { const [y,mo]=m.split('-'); return MONTH_NAMES[+mo-1]+" '"+y.slice(2); };
+const fmtL = (v) => '₹'+(v/100000).toFixed(2)+'L';
+const fmtK = (v) => '₹'+(v/1000).toFixed(1)+'K';
+const fmtINR = (v) => '₹'+Math.round(v).toLocaleString('en-IN');
+
+const REGIONS = [...new Set(DATA.map(d=>d.Region))];
+const CATEGORIES = [...new Set(DATA.map(d=>d.Category))];
+const CHANNELS = [...new Set(DATA.map(d=>d.Channel))];
+
+const state = { Region: new Set(), Category: new Set(), Channel: new Set() };
+
+function buildSlicerBar() {
+  const groups = [
+    { key:'Region', label:'Region', options:REGIONS, meta:REGION_META },
+    { key:'Category', label:'Category', options:CATEGORIES, meta:CATEGORY_META },
+    { key:'Channel', label:'Channel', options:CHANNELS, meta:CHANNEL_META },
+  ];
+  document.getElementById('slicerBar').innerHTML = groups.map(g => `
+    <div class="slicer-group" data-group="${g.key}">
+      <span class="slicer-label">${g.label}</span>
+      ${g.options.map(opt => `<button class="pill" data-group="${g.key}" data-value="${opt}">${(g.meta[opt]?.icon||'')} ${opt}</button>`).join('')}
+    </div>`).join('') + '<button class="slicer-reset" id="resetBtn">✕ Clear filters</button>';
+
+  document.getElementById('slicerBar').addEventListener('click', (e) => {
+    const btn = e.target.closest('.pill');
+    if (btn) {
+      const { group, value } = btn.dataset;
+      if (state[group].has(value)) state[group].delete(value); else state[group].add(value);
+      syncPills(); updateActivePage();
+      return;
+    }
+    if (e.target.id === 'resetBtn') {
+      Object.keys(state).forEach(k => state[k].clear());
+      syncPills(); updateActivePage();
+    }
+  });
+}
+function syncPills() {
+  document.querySelectorAll('.pill').forEach(p => {
+    p.classList.toggle('is-active', state[p.dataset.group].has(p.dataset.value));
+  });
+}
+function applyFilters() {
+  return DATA.filter(d =>
+    (state.Region.size === 0 || state.Region.has(d.Region)) &&
+    (state.Category.size === 0 || state.Category.has(d.Category)) &&
+    (state.Channel.size === 0 || state.Channel.has(d.Channel))
+  );
+}
+function sumBy(rows, keyFn, valFn) {
+  const m = new Map();
+  rows.forEach(r => { const k = keyFn(r); m.set(k, (m.get(k)||0) + valFn(r)); });
+  return m;
+}
+
+/* ---------- tabs ---------- */
+let currentPage = 1, page1Ready = false, page2Ready = false;
+function showPage(n) {
+  currentPage = n;
+  document.getElementById('page1').style.display = n === 1 ? 'flex' : 'none';
+  document.getElementById('page2').style.display = n === 2 ? 'block' : 'none';
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('is-active', +t.dataset.page === n));
+  if (n === 1 && !page1Ready) { initPage1Charts(); page1Ready = true; }
+  if (n === 2 && !page2Ready) { initPage2Charts(); page2Ready = true; }
+  updateActivePage();
+}
+function updateActivePage() {
+  const rows = applyFilters();
+  updateStatusChips(rows);
+  if (currentPage === 1 && page1Ready) updatePage1(rows);
+  if (currentPage === 2 && page2Ready) updatePage2(rows);
+}
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => showPage(+t.dataset.page)));
+
+function updateStatusChips(rows) {
+  const completed = rows.filter(r=>r.OrderStatus==='Completed').length;
+  const returned = rows.filter(r=>r.OrderStatus==='Returned').length;
+  const cancelled = rows.filter(r=>r.OrderStatus==='Cancelled').length;
+  document.getElementById('statusChips').innerHTML = `
+    <span class="chip">✅ ${completed} of ${rows.length} orders completed</span>
+    <span class="chip">↩️ ${returned} returned · ✖️ ${cancelled} cancelled</span>`;
+}
+
+/* ---------- Chart.js defaults ---------- */
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.color = '#B79E98';
+Chart.defaults.plugins.legend.display = false;
+const GRID = 'rgba(255,255,255,.06)';
+
+/* ---------- Page 1 charts ---------- */
+let trendChart, categoryChart, regionChart, productChart;
+function initPage1Charts() {
+  trendChart = new Chart(document.getElementById('trendChart'), {
+    type:'line',
+    data:{ labels:[], datasets:[
+      { label:'Revenue', data:[], borderColor:C.red, backgroundColor:'rgba(230,57,70,.14)', fill:true, tension:.35, pointRadius:1.5, pointHoverRadius:5, borderWidth:2.2 },
+      { label:'Profit', data:[], borderColor:C.gold, backgroundColor:'rgba(244,196,48,.10)', fill:true, tension:.35, pointRadius:1.5, pointHoverRadius:5, borderWidth:2.2 }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:true, position:'top', align:'end', labels:{ boxWidth:8, boxHeight:8, usePointStyle:true, font:{size:10,weight:600} } },
+        tooltip:{ callbacks:{ label:(c)=> c.dataset.label+': '+fmtINR(c.raw) } } },
+      scales:{ x:{ grid:{ display:false }, ticks:{ font:{size:9}, maxRotation:0, autoSkip:true, maxTicksLimit:11 } },
+        y:{ grid:{ color:GRID }, ticks:{ font:{size:9}, callback:(v)=> '₹'+(v/1000)+'K' } } }
+    }
+  });
+  categoryChart = new Chart(document.getElementById('categoryChart'), {
+    type:'doughnut',
+    data:{ labels:[], datasets:[{ data:[], backgroundColor:[], borderWidth:0, hoverOffset:5 }] },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'66%',
+      plugins:{ tooltip:{ callbacks:{ label:(c)=> ' '+c.label+': '+fmtINR(c.raw) } } } }
+  });
+  regionChart = new Chart(document.getElementById('regionChart'), {
+    type:'bar',
+    data:{ labels:[], datasets:[{ data:[], backgroundColor:[], borderRadius:6, barThickness:16 }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ tooltip:{ callbacks:{ label:(c)=> fmtINR(c.raw) } } },
+      scales:{ x:{ grid:{ color:GRID }, ticks:{ font:{size:9}, callback:(v)=> '₹'+(v/100000).toFixed(0)+'L' } }, y:{ grid:{ display:false }, ticks:{ font:{size:10} } } } }
+  });
+  productChart = new Chart(document.getElementById('productChart'), {
+    type:'bar',
+    data:{ labels:[], datasets:[{ data:[], backgroundColor:[], borderRadius:6, barThickness:12 }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ tooltip:{ callbacks:{ label:(c)=> fmtINR(c.raw) } } },
+      scales:{ x:{ grid:{ color:GRID }, ticks:{ font:{size:9}, callback:(v)=> '₹'+(v/100000).toFixed(1)+'L' } }, y:{ grid:{ display:false }, ticks:{ font:{size:9.5} } } } }
+  });
+}
+
+function updatePage1(rows) {
+  const completed = rows.filter(r => r.OrderStatus === 'Completed');
+  const totalOrders = rows.length, completedOrders = completed.length;
+  const netRevenue = completed.reduce((s,r)=>s+r.SalesAmount,0);
+  const grossProfit = completed.reduce((s,r)=>s+r.Profit,0);
+  const margin = netRevenue ? grossProfit/netRevenue : 0;
+  const aov = completedOrders ? netRevenue/completedOrders : 0;
+  const fulfillment = totalOrders ? completedOrders/totalOrders : 0;
+
+  const KPIS = [
+    { icon:'💰', value: netRevenue>=100000?fmtL(netRevenue):fmtK(netRevenue), label:'Net Revenue', accent: C.red },
+    { icon:'📈', value: grossProfit>=100000?fmtL(grossProfit):fmtK(grossProfit), label:'Gross Profit', accent: C.gold },
+    { icon:'🎯', value: (margin*100).toFixed(1)+'%', label:'Profit Margin', accent: C.orange },
+    { icon:'🧾', value: aov?fmtK(aov):'₹0', label:'Avg Order Value', accent: C.rose },
+    { icon:'✅', value: (fulfillment*100).toFixed(0)+'%', label:'Order Fulfillment Rate', accent: C.maroon },
+  ];
+  document.getElementById('kpiRow').innerHTML = totalOrders ? KPIS.map(k => `
+    <div class="kpi" style="--accent:${k.accent}">
+      <div class="kpi__icon">${k.icon}</div>
+      <div class="kpi__value">${k.value}</div>
+      <div class="kpi__label">${k.label}</div>
+    </div>`).join('') : `<div class="empty-note" style="grid-column:1/-1">No transactions match the current filters.</div>`;
+
+  const months = [...new Set(completed.map(r=>r.Month))].sort();
+  const revByMonth = sumBy(completed, r=>r.Month, r=>r.SalesAmount);
+  const profByMonth = sumBy(completed, r=>r.Month, r=>r.Profit);
+  trendChart.data.labels = months.map(monthLabel);
+  trendChart.data.datasets[0].data = months.map(m=>revByMonth.get(m)||0);
+  trendChart.data.datasets[1].data = months.map(m=>profByMonth.get(m)||0);
+  trendChart.update('none');
+
+  const catMap = sumBy(completed, r=>r.Category, r=>r.SalesAmount);
+  const cats = [...catMap.keys()].sort((a,b)=>catMap.get(b)-catMap.get(a));
+  categoryChart.data.labels = cats;
+  categoryChart.data.datasets[0].data = cats.map(c=>catMap.get(c));
+  categoryChart.data.datasets[0].backgroundColor = cats.map(c=>CATEGORY_META[c]?.color || C.rose);
+  categoryChart.update('none');
+  document.getElementById('categoryLegend').innerHTML = cats.map(c => {
+    const v = catMap.get(c);
+    return `<div class="legend__item"><span class="dot" style="background:${CATEGORY_META[c]?.color||C.rose}"></span>${CATEGORY_META[c]?.icon||''} ${c} — ${netRevenue?(v/netRevenue*100).toFixed(0):0}%</div>`;
+  }).join('');
+  document.getElementById('categoryNote').textContent = 'Share of ' + (netRevenue?fmtL(netRevenue):'₹0');
+
+  const regMap = sumBy(completed, r=>r.Region, r=>r.SalesAmount);
+  const regs = [...regMap.keys()].sort((a,b)=>regMap.get(b)-regMap.get(a));
+  regionChart.data.labels = regs.map(r => (REGION_META[r]?.icon||'')+' '+r);
+  regionChart.data.datasets[0].data = regs.map(r=>regMap.get(r));
+  regionChart.data.datasets[0].backgroundColor = regs.map(r=>REGION_META[r]?.color||C.rose);
+  regionChart.update('none');
+
+  const prodMap = sumBy(completed, r=>r.ProductName, r=>r.SalesAmount);
+  const prodCat = new Map(completed.map(r=>[r.ProductName, r.Category]));
+  const prods = [...prodMap.keys()].sort((a,b)=>prodMap.get(b)-prodMap.get(a)).slice(0,5);
+  productChart.data.labels = prods.map(p => (CATEGORY_META[prodCat.get(p)]?.icon||'')+' '+p);
+  productChart.data.datasets[0].data = prods.map(p=>prodMap.get(p));
+  productChart.data.datasets[0].backgroundColor = prods.map(p=>CATEGORY_META[prodCat.get(p)]?.color||C.rose);
+  productChart.update('none');
+}
+
+/* ---------- Page 2 charts ---------- */
+let spChart, statusChart, custChart, paymentChart;
+function initPage2Charts() {
+  spChart = new Chart(document.getElementById('spChart'), {
+    type:'bar',
+    data:{ labels:[], datasets:[{ data:[], backgroundColor:C.red, borderRadius:6, barThickness:14 }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ tooltip:{ callbacks:{ label:(c)=> fmtINR(c.raw) } } },
+      scales:{ x:{ grid:{ color:GRID }, ticks:{ callback:(v)=> '₹'+(v/100000).toFixed(1)+'L' } }, y:{ grid:{ display:false } } } }
+  });
+  statusChart = new Chart(document.getElementById('statusChart'), {
+    type:'doughnut',
+    data:{ labels:[], datasets:[{ data:[], backgroundColor:[], borderWidth:0, hoverOffset:5 }] },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'62%',
+      plugins:{ legend:{ display:true, position:'bottom', labels:{ boxWidth:8, boxHeight:8, usePointStyle:true, font:{size:10.5,weight:600} } },
+        tooltip:{ callbacks:{ label:(c)=> ' '+c.label+': '+c.raw+' orders' } } } }
+  });
+  custChart = new Chart(document.getElementById('custChart'), {
+    type:'bar',
+    data:{ labels:[], datasets:[{ data:[], backgroundColor:C.gold, borderRadius:6, barThickness:14 }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ tooltip:{ callbacks:{ label:(c)=> fmtINR(c.raw) } } },
+      scales:{ x:{ grid:{ color:GRID }, ticks:{ callback:(v)=> '₹'+(v/100000).toFixed(1)+'L' } }, y:{ grid:{ display:false }, ticks:{ font:{size:9.5} } } } }
+  });
+  paymentChart = new Chart(document.getElementById('paymentChart'), {
+    type:'doughnut',
+    data:{ labels:[], datasets:[{ data:[], backgroundColor:[], borderWidth:0, hoverOffset:5 }] },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'62%',
+      plugins:{ legend:{ display:true, position:'bottom', labels:{ boxWidth:8, boxHeight:8, usePointStyle:true, font:{size:10,weight:600} } },
+        tooltip:{ callbacks:{ label:(c)=> ' '+c.label+': '+fmtINR(c.raw) } } } }
+  });
+}
+
+function updatePage2(rows) {
+  const completed = rows.filter(r => r.OrderStatus === 'Completed');
+  const netRevenue = completed.reduce((s,r)=>s+r.SalesAmount,0);
+
+  const spMap = sumBy(completed, r=>r.Salesperson, r=>r.SalesAmount);
+  const spOrders = sumBy(completed, r=>r.Salesperson, ()=>1);
+  const sps = [...spMap.keys()].sort((a,b)=>spMap.get(b)-spMap.get(a));
+  spChart.data.labels = sps;
+  spChart.data.datasets[0].data = sps.map(s=>spMap.get(s));
+  spChart.update('none');
+
+  const statusMap = sumBy(rows, r=>r.OrderStatus, ()=>1);
+  const statuses = ['Completed','Returned','Cancelled'].filter(s=>statusMap.has(s));
+  statusChart.data.labels = statuses;
+  statusChart.data.datasets[0].data = statuses.map(s=>statusMap.get(s));
+  statusChart.data.datasets[0].backgroundColor = statuses.map(s=>STATUS_META[s]?.color||C.rose);
+  statusChart.update('none');
+
+  const custMap = sumBy(completed, r=>r.CustomerName, r=>r.SalesAmount);
+  const custs = [...custMap.keys()].sort((a,b)=>custMap.get(b)-custMap.get(a)).slice(0,5);
+  custChart.data.labels = custs;
+  custChart.data.datasets[0].data = custs.map(c=>custMap.get(c));
+  custChart.update('none');
+
+  const payMap = sumBy(completed, r=>r.PaymentMethod, r=>r.SalesAmount);
+  const pays = [...payMap.keys()].sort((a,b)=>payMap.get(b)-payMap.get(a));
+  paymentChart.data.labels = pays;
+  paymentChart.data.datasets[0].data = pays.map(p=>payMap.get(p));
+  paymentChart.data.datasets[0].backgroundColor = pays.map((_,i)=>PAYMENT_PALETTE[i%PAYMENT_PALETTE.length]);
+  paymentChart.update('none');
+
+  const chMap = sumBy(completed, r=>r.Channel, r=>r.SalesAmount);
+  const chans = [...chMap.keys()].sort((a,b)=>chMap.get(b)-chMap.get(a));
+  document.getElementById('mixBar').innerHTML = chans.map(c => {
+    const pct = netRevenue ? (chMap.get(c)/netRevenue*100) : 0;
+    return `<div style="width:${pct}%;background:${CHANNEL_META[c]?.color||C.rose}"></div>`;
+  }).join('') || '<div style="width:100%;background:#3A2427"></div>';
+  document.getElementById('mixLegend').innerHTML = chans.map(c => {
+    const pct = netRevenue ? (chMap.get(c)/netRevenue*100) : 0;
+    return `<span>${CHANNEL_META[c]?.icon||''} ${c} ${pct.toFixed(0)}%</span>`;
+  }).join('') || '<span>No data</span>';
+
+  if (sps.length) {
+    const top = sps[0];
+    document.getElementById('performerBox').innerHTML = `
+      <div class="performer__avatar">${top[0]}</div>
+      <div>
+        <div class="performer__name">${top}</div>
+        <div class="performer__meta">${fmtL(spMap.get(top))} revenue · ${spOrders.get(top)} orders closed</div>
+      </div>`;
+  } else {
+    document.getElementById('performerBox').innerHTML = `<div class="empty-note">No completed orders in this view.</div>`;
+  }
+
+  const regMap = sumBy(completed, r=>r.Region, r=>r.SalesAmount);
+  const regs = [...regMap.keys()].sort((a,b)=>regMap.get(b)-regMap.get(a));
+  const oppEl = document.getElementById('opportunityText');
+  if (regs.length >= 2) {
+    const best = regs[0], worst = regs[regs.length-1];
+    const gap = regMap.get(best) - regMap.get(worst);
+    oppEl.innerHTML = `<b>${worst}</b> region trails <b>${best}</b> by <b>${fmtL(gap)}</b> in revenue — a focused push here could close the regional gap.`;
+  } else if (regs.length === 1) {
+    oppEl.innerHTML = `Only <b>${regs[0]}</b> region is in view — clear filters to compare regional performance.`;
+  } else {
+    oppEl.innerHTML = `Not enough data in the current view to surface a regional opportunity.`;
+  }
+}
+
+buildSlicerBar();
+showPage(1);
+</script>
+</body>
+</html>
